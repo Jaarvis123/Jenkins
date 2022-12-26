@@ -1,0 +1,36 @@
+pipeline {
+    agent any
+    stages {
+        stage('CheckoutCode') {
+            steps {
+                checkout scm
+                git branch: 'development', credentialsId: 'f1041dbb-daa3-4e0a-99d4-b513d7fe5349', url: 'https://github.com/Jaarvis123/maven-web-application.git'
+            }
+        }
+        stage('Authenticate with Azure') {
+            steps {
+                script {
+                    az login --service-principal -u ${client_id} -p ${client_secret} --tenant ${tenant_id}
+                }
+            }
+        }
+        stage('Validate') {
+            steps {
+                sh 'terraform validate'
+            }
+        }
+        stage('Plan') {
+            steps {
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+        stage('Apply') {
+            steps {
+                script {
+                    def tfOutput = sh returnStdout: true, script: 'terraform apply -auto-approve tfplan'
+                    echo "Output: ${tfOutput}"
+                }
+            }
+        }
+    }
+}
